@@ -1,0 +1,233 @@
+DouEcoSys | 豆生态
+
+https://img.shields.io/badge/License-Kernel_GPL%2FApp_Apache2.0-blue
+https://img.shields.io/badge/Phase-Concept-brightgreen
+https://img.shields.io/badge/Platform-RaspberryPi%2FQEMU%2FPinePhone-orange
+
+一个完全自主、隐私优先、以离线AI为核心的全场景操作系统与生态。
+
+✨ 核心理念
+
+· 安全为根：基于形式化验证的seL4微内核，通过能力模型实现无Root、强隔离。
+· AI为魂：内置全离线豆汁助手，作为智能中枢，数据永不云端上传。
+· 生态闭环：从安全手机到PC、穿戴设备，提供一致、安全、可控的体验。
+
+🏗️ 系统架构
+
+```
+┌─────────────────────────────────────────────┐
+│            DouEcoApps Framework             │
+│      (基于能力模型的开发者SDK)                │
+├─────────────────────────────────────────────┤
+│        豆汁助手 (DouJuice)                    │
+│   ┌─────────────┬─────────────┐            │
+│   │   移动端    │   桌面端    │            │
+│   │   (AI引擎)  │   (AI引擎)  │            │
+├───┴─────────────┴─────────────┴────────────┤
+│              DouKernel                       │
+│   ┌───────────────────────────────────────┐ │
+│   │   形式化验证的seL4微内核               │ │
+│   │   • 安全启动                          │ │
+│   │   • 能力访问控制                      │ │
+│   │   • 硬件隔离层                        │ │
+│   └───────────────────────────────────────┘ │
+└─────────────────────────────────────────────┘
+```
+
+📦 核心模块
+
+模块 描述 状态
+DouKernel 基于seL4的安全微内核系统，包含硬件适配、能力管理、安全启动与用户态驱动框架 🔧 开发中
+DouJuice-Core 离线AI引擎：核心语音识别、NLP、场景理解模型与本地执行引擎 📝 规划中
+DouJuice-Mobile 移动端豆汁助手：集成DouJuice-Core，提供移动端交互界面与隐私保险箱等专属功能 📝 规划中
+DouJuice-PC 桌面端豆汁助手，支持跨设备加密协同 📝 规划中
+DouEco-Apps-Framework 生态应用框架：为开发者提供的、基于能力模型的SDK、安全通信库和应用沙箱规范 📝 规划中
+DouEco-Hardware 硬件适配：面向树莓派4、特定手机开发板的硬件驱动与移植文档 📝 规划中
+
+🔧 核心代码示例
+
+1. 内核层：安全能力授权
+
+```c
+// 文件：/src/services/permission_mgr.c
+// 为应用授予临时麦克风访问能力的安全实现
+
+seL4_CPtr grant_mic_to_assistant(seL4_CPtr assistant_pd, uint32_t duration_ms) {
+    // 1. 从内核根能力中派生临时受限能力
+    seL4_CPtr temp_mic_cap = seL4_CapDerive(
+        root_microphone_cap,
+        seL4_CanRead | seL4_CanCall
+    );
+
+    // 2. 将能力与特定保护域绑定
+    bind_cap_to_pd(temp_mic_cap, assistant_pd);
+
+    // 3. 设置精确有效期
+    if (duration_ms == 0) {
+        tag_cap_as_single_use(temp_mic_cap);
+    } else {
+        set_cap_expiry(temp_mic_cap, get_system_tick() + duration_ms);
+    }
+
+    // 4. 通过安全IPC通道发送能力
+    if (seL4_SendWithCap(assistant_pd, temp_mic_cap) != seL4_NoError) {
+        seL4_CapRevoke(temp_mic_cap);
+        return seL4_CapNull;
+    }
+    return temp_mic_cap;
+}
+```
+
+2. 应用层：离线AI处理
+
+```python
+# 文件：/core/voice_engine.py
+# 豆汁助手离线语音处理引擎
+
+class DouJuiceVoiceEngine:
+    def __init__(self, local_model_path='./models/'):
+        # 1. 加载完全离线模型
+        self.asr_model = load_local_asr_model(local_model_path + 'model.bin')
+        self.nlp_processor = LocalNLPProcessor(local_model_path + 'nlp_core.bin')
+        # 2. 初始化安全能力客户端
+        self.secure_client = DouKernelCapabilityClient()
+
+    def process_wakeup_command(self, audio_data):
+        """处理唤醒词后的语音指令"""
+        # 3. 本地语音识别
+        text = self.asr_model.transcribe(audio_data)
+        if "开启会议模式" in text:
+            # 4. 本地自然语言理解
+            intent, params = self.nlp_processor.parse(text)
+            # 5. 申请执行操作所需的安全能力
+            caps = self.secure_client.request_caps([CAP_SILENCE_SYSTEM, CAP_RECORD_AUDIO])
+            # 6. 执行本地操作
+            execute_meeting_mode(caps)
+            # 7. 主动释放临时能力
+            self.secure_client.release_caps(caps)
+```
+
+🚀 快速开始
+
+环境要求
+
+· 开发主机：Ubuntu 20.04 LTS或更高版本
+· 硬件平台：树莓派4（4GB+内存）或QEMU模拟器
+· 存储：16GB+ SD卡或存储空间
+
+在树莓派4上构建演示版
+
+```bash
+# 1. 获取源代码
+git clone --recursive https://github.com/DouEcoSys/DouKernel.git
+cd DouKernel
+
+# 2. 安装依赖
+sudo apt-get install build-essential cmake git python3-dev
+
+# 3. 配置构建
+mkdir build && cd build
+cmake .. -DPLATFORM=rpi4 -DBUILD_DEMO=ON
+
+# 4. 编译内核
+make -j$(nproc)
+
+# 5. 生成SD卡镜像
+make image
+
+# 6. 写入SD卡（请替换sdX为您的设备）
+sudo dd if=dou-rpi4-demo.img of=/dev/sdX bs=4M status=progress
+```
+
+使用QEMU模拟器运行
+
+```bash
+# 1. 获取QEMU专用构建
+git clone --recursive https://github.com/DouEcoSys/DouKernel.git
+cd DouKernel/qemu
+
+# 2. 运行演示环境
+./run-demo.sh
+
+# 3. 体验功能：
+#    - 语音唤醒："你好豆汁"
+#    - 基础命令测试
+#    - 安全能力演示
+```
+
+📈 开发路线图
+
+阶段0：基石（当前）
+
+· 创建组织与仓库结构
+· 在QEMU上启动最小系统
+· 实现基础能力控制演示
+· 开源基础语音识别模块
+
+阶段1：单点突破
+
+· 完善移动端豆汁助手基础功能
+· 发布应用框架Alpha版SDK
+· 适配1-2款开源手机硬件
+
+阶段2：生态初现
+
+· 发布桌面端豆汁助手
+· 实现跨设备加密协同
+· 推出官方应用市场首批应用
+
+阶段3：稳定发展
+
+· 形式化验证扩展到关键组件
+· 支持主流手机芯片平台
+· 企业级部署方案
+· 国际社区建设
+
+详细路线图请参见 ROADMAP.md
+
+👥 加入贡献
+
+我们正在寻找以下领域的贡献者：
+
+· 微内核开发：熟悉seL4、CAmkES、硬件抽象
+· AI模型优化：本地化NLP、语音识别、模型压缩
+· 安全研究：形式化验证、侧信道防护、安全协议
+· 硬件移植：手机SoC适配、设备树配置、驱动开发
+· 应用生态：隐私优先应用开发、开发者工具
+
+贡献流程
+
+1. 查看 CONTRIBUTING.md 了解贡献指南
+2. 选择感兴趣的项目模块
+3. 提交Issue讨论您的想法
+4. Fork仓库并提交Pull Request
+
+沟通渠道
+
+· 开发讨论：GitHub Issues
+· 文档改进：直接提交文档修改PR
+· 安全报告：请参见 SECURITY.md
+
+📄 许可证
+
+本项目采用多重许可证策略：
+
+· 内核与系统核心：GNU General Public License v2.0
+· AI模型与工具库：Apache License 2.0
+· 应用程序框架：MIT License
+· 文档与设计：Creative Commons Attribution 4.0 International
+
+各子模块的具体许可证详见其源码目录中的LICENSE文件。
+
+🛡️ 安全与隐私
+
+· 所有设计遵循"隐私优先"原则
+· 数据默认本地处理，网络访问需明确授权
+· 通过形式化验证的内核确保基础安全
+· 完整的安全漏洞报告与响应流程
+
+安全政策详见 SECURITY.md
+
+---
+
+豆生态 - 重新定义自主、安全、智能的数字生活体验
