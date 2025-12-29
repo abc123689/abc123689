@@ -1,0 +1,914 @@
+DouChat | 豆加密聊天
+
+一个完全端到端加密、自主开发、无外部依赖的即时通讯系统，包含原生应用和Web版本。不基于Android，不使用Google技术栈，所有组件完全自主实现。
+
+🎯 项目目标
+
+· 完全端到端加密：自主实现Signal协议变体，前向保密、后向保密
+· 跨平台兼容：原生应用（豆生态） + 纯前端Web应用
+· 去中心化架构：支持点对点直连和中继服务器混合模式
+· 无外部依赖：不使用任何第三方SDK或服务
+· 隐私优先：元数据最小化、无用户追踪、本地密钥存储
+
+🏗️ 系统架构
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   豆聊天应用层                                │
+│   ┌───────────────┬───────────────┬───────────────┐       │
+│   │   原生应用     │   Web应用     │   CLI工具     │       │
+│   │  (豆生态)      │  (纯前端)      │  (终端)        │       │
+├───┴───────────────┴───────────────┴───────────────┴───────┤
+│                     统一协议层                              │
+│   ┌─────────────────────────────────────────────────────┐ │
+│   │   豆聊天协议 (DCP)                                   │ │
+│   │   • 消息格式                                        │ │
+│   │   • 会话管理                                        │ │
+│   │   • 群组协议                                        │ │
+├───┼─────────────────────────────────────────────────────┤ │
+│   │   端到端加密层                                      │ │
+│   │   • 双棘轮算法                                      │ │
+│   │   • X3DH密钥交换                                    │ │
+│   │   • 后量子加密                                      │ │
+├───┼─────────────────────────────────────────────────────┤ │
+│   │   网络传输层                                        │ │
+│   │   • WebRTC (P2P)                                   │ │
+│   │   • WebSocket (中继)                                │ │
+│   │   • Tor支持 (可选)                                  │ │
+└───┼─────────────────────────────────────────────────────┤ │
+    │   豆生态安全层                                      │ │
+    │   • 能力模型隔离                                    │ │
+    │   • 安全密钥存储                                    │ │
+    │   • 硬件密钥支持                                    │ │
+    └─────────────────────────────────────────────────────┘ │
+                        DouKernel 微内核                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+🔧 核心技术栈
+
+完全自主实现组件
+
+组件 技术实现 特性
+端到端加密协议 自主Signal协议变体 前向保密、后向保密、拒绝服务防护
+密钥管理 分层确定性钱包 助记词恢复、多设备同步
+网络传输 自主WebRTC栈 + WebSocket NAT穿透、降级回退
+消息存储 本地加密数据库 客户端搜索、零知识证明
+身份系统 自主分布式身份 非对称密钥对、去中心化认证
+
+协议设计原则
+
+1. 协议透明：所有协议规范公开可审计
+2. 密码学敏捷：支持算法无缝升级
+3. 元数据保护：最小化暴露信息
+4. 可否认性：支持可否认认证
+5. 后量子安全：支持抗量子攻击算法
+
+📁 项目结构
+
+主仓库：DouChat
+
+```
+DouChat/
+├── README.md                    # 项目总览
+├── PROTOCOL.md                  # 协议规范文档
+├── SECURITY.md                  # 安全设计文档
+├── architecture/               # 架构设计文档
+│   ├── crypto-design.md        # 密码学设计
+│   ├── protocol-spec.md        # 协议详细规范
+│   └── threat-model.md         # 威胁模型分析
+├── core/                       # 核心协议库 (Rust)
+│   ├── Cargo.toml
+│   ├── src/
+│   │   ├── lib.rs
+│   │   ├── crypto/            # 密码学实现
+│   │   │   ├── double_ratchet.rs  # 双棘轮算法
+│   │   │   ├── x3dh.rs            # X3DH密钥交换
+│   │   │   ├── pqc.rs             # 后量子加密
+│   │   │   └── signatures.rs      # 数字签名
+│   │   ├── protocol/          # 协议实现
+│   │   │   ├── messages.rs        # 消息格式
+│   │   │   ├── sessions.rs        # 会话管理
+│   │   │   ├── groups.rs          # 群组协议
+│   │   │   └── transport.rs       # 传输协议
+│   │   ├── network/           # 网络层
+│   │   │   ├── webrtc.rs          # WebRTC实现
+│   │   │   ├── websocket.rs       # WebSocket实现
+│   │   │   └── nat.rs             # NAT穿透
+│   │   └── storage/           # 存储
+│   │       ├── encrypted_db.rs    # 加密数据库
+│   │       ├── key_store.rs       # 密钥存储
+│   │       └── message_store.rs   # 消息存储
+│   └── tests/                 # 核心测试
+│       ├── crypto_tests.rs
+│       └── protocol_tests.rs
+├── native/                    # 原生应用 (豆生态)
+│   ├── Cargo.toml
+│   ├── src/
+│   │   ├── main.rs           # 应用入口
+│   │   ├── ui/               # 用户界面
+│   │   │   ├── main_window.rs
+│   │   │   ├── chat_view.rs
+│   │   │   └── settings.rs
+│   │   ├── integration/      # 豆生态集成
+│   │   │   ├── capability.rs # 能力模型
+│   │   │   ├── secure_storage.rs # 安全存储
+│   │   │   └── hardware_key.rs    # 硬件密钥
+│   │   └── logic/           # 业务逻辑
+│   │       ├── contact_manager.rs
+│   │       ├── message_handler.rs
+│   │       └── call_manager.rs
+│   └── resources/           # 资源文件
+│       └── ui/              # UI定义文件
+├── web/                     # Web应用 (纯前端)
+│   ├── index.html           # 主页面
+│   ├── manifest.json        # Web应用清单
+│   ├── src/
+│   │   ├── main.js          # 应用入口
+│   │   ├── app/             # 应用组件
+│   │   │   ├── App.vue/App.svelte/App.etc
+│   │   │   ├── ChatWindow.vue
+│   │   │   └── ContactList.vue
+│   │   ├── core/            # 核心逻辑 (WASM)
+│   │   │   └── wasm-bridge.js # WASM桥接
+│   │   ├── crypto/          # Web端加密
+│   │   │   ├── webcrypto-wrapper.js
+│   │   │   └── key-management.js
+│   │   └── storage/         # 浏览器存储
+│   │       ├── indexeddb.js
+│   │       └── local-encrypted.js
+│   ├── public/             # 静态资源
+│   └── build/              # 构建配置
+├── cli/                    # 命令行工具
+│   ├── Cargo.toml
+│   └── src/
+│       ├── main.rs
+│       └── commands/
+├── relay/                  # 中继服务器 (可选)
+│   ├── Cargo.toml
+│   └── src/
+│       ├── main.rs
+│       ├── server.rs       # 服务器实现
+│       └── message_relay.rs # 消息中继
+└── tools/                  # 开发工具
+    ├── key-generator/      # 密钥生成器
+    ├── protocol-test/      # 协议测试工具
+    └── benchmark/          # 性能测试
+```
+
+🚀 核心代码示例
+
+1. 自主端到端加密协议实现
+
+```rust
+// 文件：core/src/crypto/double_ratchet.rs
+// 双棘轮算法完全自主实现
+
+pub struct DoubleRatchet {
+    root_key: [u8; 32],
+    chain_keys_send: ChainKey,
+    chain_keys_recv: ChainKey,
+    ratchet_key_pair: KeyPair,
+    remote_ratchet_key: Option<PublicKey>,
+    message_keys: HashMap<u32, [u8; 32]>,
+    skipped_message_keys: HashMap<u32, [u8; 32]>,
+}
+
+impl DoubleRatchet {
+    pub fn new() -> Self {
+        let root_key = Self::generate_random_32();
+        let dh_key_pair = KeyPair::generate();
+        
+        DoubleRatchet {
+            root_key,
+            chain_keys_send: ChainKey::new(),
+            chain_keys_recv: ChainKey::new(),
+            ratchet_key_pair: dh_key_pair,
+            remote_ratchet_key: None,
+            message_keys: HashMap::new(),
+            skipped_message_keys: HashMap::new(),
+        }
+    }
+    
+    pub fn initialize_as_alice(
+        &mut self, 
+        bob_identity_key: &PublicKey,
+        bob_signed_prekey: &PublicKey,
+        bob_one_time_prekey: Option<&PublicKey>
+    ) -> Result<InitialMessage, CryptoError> {
+        // 1. 执行X3DH密钥交换
+        let shared_secret = self.perform_x3dh(
+            bob_identity_key,
+            bob_signed_prekey,
+            bob_one_time_prekey
+        )?;
+        
+        // 2. 派生根密钥和链密钥
+        let (root_key, chain_key) = self.kdf_rk(
+            &[0u8; 32], // 初始根密钥为0
+            &shared_secret
+        );
+        self.root_key = root_key;
+        self.chain_keys_send = ChainKey::from_key(chain_key);
+        
+        // 3. 执行DH棘轮
+        self.perform_dh_ratchet()?;
+        
+        // 4. 构建初始消息
+        let initial_message = InitialMessage {
+            identity_key: self.ratchet_key_pair.public_key(),
+            ephemeral_key: self.generate_ephemeral_key(),
+            one_time_prekey_id: bob_one_time_prekey.map(|_| 1),
+        };
+        
+        Ok(initial_message)
+    }
+    
+    pub fn encrypt_message(&mut self, plaintext: &[u8], ad: &[u8]) -> Result<EncryptedMessage, CryptoError> {
+        // 1. 派生消息密钥
+        let (message_key, next_chain_key) = self.chain_keys_send.kdf_ck();
+        self.chain_keys_send = next_chain_key;
+        
+        // 2. 使用ChaCha20-Poly1305加密
+        let nonce = Self::generate_nonce();
+        let ciphertext = self.encrypt_chacha20_poly1305(
+            plaintext,
+            &message_key,
+            &nonce,
+            ad
+        )?;
+        
+        // 3. 构建消息头
+        let header = MessageHeader {
+            ratchet_key: self.ratchet_key_pair.public_key(),
+            message_number: self.chain_keys_send.message_number(),
+            previous_message_number: self.chain_keys_send.previous_message_number(),
+        };
+        
+        // 4. 存储消息密钥（用于可能的延迟消息）
+        let message_number = header.message_number;
+        self.message_keys.insert(message_number, message_key);
+        
+        Ok(EncryptedMessage {
+            header,
+            ciphertext,
+            nonce,
+        })
+    }
+    
+    pub fn decrypt_message(&mut self, message: &EncryptedMessage, ad: &[u8]) -> Result<Vec<u8>, CryptoError> {
+        let header = &message.header;
+        
+        // 1. 检查是否需要更新棘轮
+        if header.ratchet_key != self.remote_ratchet_key.unwrap_or_default() {
+            self.handle_new_ratchet_key(header.ratchet_key)?;
+        }
+        
+        // 2. 查找消息密钥
+        let message_key = if let Some(key) = self.message_keys.get(&header.message_number) {
+            *key
+        } else if let Some(key) = self.skipped_message_keys.remove(&header.message_number) {
+            key
+        } else {
+            // 需要派生缺失的消息密钥
+            self.skip_message_keys(header.message_number)?;
+            *self.message_keys.get(&header.message_number)
+                .ok_or(CryptoError::MissingMessageKey)?
+        };
+        
+        // 3. 解密消息
+        let plaintext = self.decrypt_chacha20_poly1305(
+            &message.ciphertext,
+            &message_key,
+            &message.nonce,
+            ad
+        )?;
+        
+        // 4. 清理已使用的消息密钥
+        self.message_keys.remove(&header.message_number);
+        
+        Ok(plaintext)
+    }
+    
+    // 前向保密：定期更新棘轮
+    pub fn perform_ratchet_update(&mut self) -> Result<(), CryptoError> {
+        let new_key_pair = KeyPair::generate();
+        
+        // 计算新的DH共享密钥
+        let dh_output = self.calculate_dh(
+            &self.ratchet_key_pair,
+            &self.remote_ratchet_key.ok_or(CryptoError::NoRemoteKey)?
+        )?;
+        
+        // 更新根密钥和链密钥
+        let (new_root_key, new_chain_key) = self.kdf_rk(&self.root_key, &dh_output);
+        self.root_key = new_root_key;
+        self.chain_keys_recv = ChainKey::from_key(new_chain_key);
+        
+        // 更新密钥对
+        self.ratchet_key_pair = new_key_pair;
+        
+        Ok(())
+    }
+}
+
+// X3DH密钥交换实现
+impl DoubleRatchet {
+    fn perform_x3dh(
+        &self,
+        identity_key: &PublicKey,
+        signed_prekey: &PublicKey,
+        one_time_prekey: Option<&PublicKey>
+    ) -> Result<[u8; 32], CryptoError> {
+        let mut dh1 = self.calculate_dh(&self.ratchet_key_pair, identity_key)?;
+        let dh2 = self.calculate_dh(&self.generate_ephemeral_key_pair(), signed_prekey)?;
+        let dh3 = self.calculate_dh(&self.ratchet_key_pair, signed_prekey)?;
+        
+        let mut shared_secret = [0u8; 32];
+        
+        // 组合DH输出
+        self.kdf1(&dh1, &mut shared_secret);
+        self.kdf1(&dh2, &mut shared_secret);
+        self.kdf1(&dh3, &mut shared_secret);
+        
+        if let Some(otpk) = one_time_prekey {
+            let dh4 = self.calculate_dh(&self.generate_ephemeral_key_pair(), otpk)?;
+            self.kdf1(&dh4, &mut shared_secret);
+        }
+        
+        Ok(shared_secret)
+    }
+}
+```
+
+2. 豆聊天协议 (DCP) 消息格式
+
+```rust
+// 文件：core/src/protocol/messages.rs
+// 自主消息协议设计
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum MessageType {
+    Text(TextMessage),
+    Image(ImageMessage),
+    File(FileMessage),
+    Voice(VoiceMessage),
+    Video(VideoMessage),
+    Call(CallMessage),
+    Group(GroupMessage),
+    System(SystemMessage),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Envelope {
+    pub version: u8,           // 协议版本
+    pub id: MessageId,         // 消息ID (UUID v7)
+    pub timestamp: u64,        // 纳秒级时间戳
+    pub sender: Identity,      // 发送者身份
+    pub recipient: Recipient,  // 接收者（单人或群组）
+    pub message_type: MessageType,
+    pub metadata: Metadata,    // 元数据（加密）
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TextMessage {
+    pub content: EncryptedString, // 加密文本
+    pub mentions: Vec<Mention>,   // @提及
+    pub reply_to: Option<MessageId>, // 回复消息ID
+    pub formatting: Option<Formatting>, // 富文本格式
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImageMessage {
+    pub thumbnail: EncryptedData,  // 缩略图（加密）
+    pub full_image: ImageData,     // 完整图像数据或引用
+    pub dimensions: (u32, u32),    // 宽高
+    pub format: ImageFormat,       // 格式：JPEG/PNG/WEBP
+    pub caption: Option<EncryptedString>, // 可选标题
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FileMessage {
+    pub filename: EncryptedString,
+    pub file_size: u64,
+    pub mime_type: String,
+    pub chunks: Vec<FileChunk>,    // 分片传输
+    pub hash: [u8; 32],           // SHA-256文件哈希
+}
+
+// 加密消息包装
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EncryptedMessage {
+    pub header: MessageHeader,     // 消息头（未加密）
+    pub ciphertext: Vec<u8>,       // 加密消息体
+    pub auth_tag: [u8; 16],        // 认证标签
+    pub nonce: [u8; 12],          // 加密随机数
+}
+
+impl EncryptedMessage {
+    pub fn encrypt(
+        message: &Envelope,
+        session: &mut DoubleRatchet,
+        associated_data: &[u8]
+    ) -> Result<Self, ProtocolError> {
+        // 序列化消息
+        let plaintext = message.serialize()?;
+        
+        // 使用双棘轮加密
+        let encrypted = session.encrypt_message(&plaintext, associated_data)?;
+        
+        Ok(EncryptedMessage {
+            header: encrypted.header,
+            ciphertext: encrypted.ciphertext,
+            auth_tag: encrypted.auth_tag,
+            nonce: encrypted.nonce,
+        })
+    }
+    
+    pub fn decrypt(
+        &self,
+        session: &mut DoubleRatchet,
+        associated_data: &[u8]
+    ) -> Result<Envelope, ProtocolError> {
+        // 使用双棘轮解密
+        let plaintext = session.decrypt_message(self, associated_data)?;
+        
+        // 反序列化消息
+        Envelope::deserialize(&plaintext)
+    }
+}
+```
+
+3. Web端纯前端实现
+
+```javascript
+// 文件：web/src/core/wasm-bridge.js
+// WebAssembly桥接，使用核心Rust库
+
+class DouChatWeb {
+    constructor() {
+        this.wasmModule = null;
+        this.crypto = new WebCryptoWrapper();
+        this.storage = new EncryptedStorage();
+        this.sessions = new Map();
+    }
+    
+    async initialize() {
+        // 1. 加载WASM核心模块
+        this.wasmModule = await import('../../core/pkg/dou_chat_core.js');
+        await this.wasmModule.default();
+        
+        // 2. 初始化本地身份
+        await this.initializeIdentity();
+        
+        // 3. 加载现有会话
+        await this.loadSessions();
+        
+        // 4. 建立网络连接
+        await this.setupNetwork();
+    }
+    
+    async initializeIdentity() {
+        // 检查是否有现有身份
+        let identity = await this.storage.get('identity');
+        
+        if (!identity) {
+            // 生成新身份
+            identity = await this.generateNewIdentity();
+            await this.storage.set('identity', identity, true); // 加密存储
+        }
+        
+        this.identity = identity;
+    }
+    
+    async generateNewIdentity() {
+        // 1. 生成密钥对
+        const keyPair = await this.crypto.generateKeyPair({
+            name: 'ECDH',
+            namedCurve: 'P-256'
+        });
+        
+        // 2. 生成签名密钥对
+        const signingKeyPair = await this.crypto.generateKeyPair({
+            name: 'ECDSA',
+            namedCurve: 'P-256',
+            hash: 'SHA-256'
+        });
+        
+        // 3. 生成身份ID（基于公钥）
+        const identityId = await this.crypto.hash(
+            await this.crypto.exportKey('spki', keyPair.publicKey)
+        );
+        
+        // 4. 生成助记词（用于恢复）
+        const mnemonic = this.generateMnemonic();
+        
+        return {
+            id: identityId,
+            keyPair: keyPair,
+            signingKeyPair: signingKeyPair,
+            mnemonic: mnemonic,
+            created: Date.now()
+        };
+    }
+    
+    async startSession(remoteIdentity) {
+        // 使用WASM执行X3DH密钥交换
+        const session = this.wasmModule.create_session(
+            this.identity.keyPair.privateKey,
+            remoteIdentity.publicKey,
+            remoteIdentity.signedPrekey
+        );
+        
+        // 构建初始消息
+        const initialMessage = this.wasmModule.build_initial_message(session);
+        
+        // 存储会话状态
+        this.sessions.set(remoteIdentity.id, session);
+        await this.saveSession(session);
+        
+        return initialMessage;
+    }
+    
+    async sendMessage(recipientId, message) {
+        const session = this.sessions.get(recipientId);
+        if (!session) {
+            throw new Error('No session with recipient');
+        }
+        
+        // 加密消息
+        const encrypted = this.wasmModule.encrypt_message(
+            session,
+            JSON.stringify(message)
+        );
+        
+        // 构建协议消息
+        const envelope = {
+            version: 1,
+            id: this.generateMessageId(),
+            timestamp: Date.now(),
+            sender: this.identity.id,
+            recipient: recipientId,
+            message: encrypted
+        };
+        
+        // 发送（通过WebRTC或WebSocket）
+        await this.network.send(recipientId, envelope);
+        
+        // 本地存储（加密）
+        await this.storage.storeMessage(envelope);
+    }
+    
+    async receiveMessage(envelope) {
+        const session = this.sessions.get(envelope.sender);
+        if (!session) {
+            // 处理初始消息，建立新会话
+            await this.handleInitialMessage(envelope);
+            return;
+        }
+        
+        // 解密消息
+        const decrypted = this.wasmModule.decrypt_message(
+            session,
+            envelope.message
+        );
+        
+        // 验证消息完整性
+        if (!this.verifyMessage(decrypted, envelope)) {
+            throw new Error('Message verification failed');
+        }
+        
+        // 更新会话状态
+        this.wasmModule.update_session(session, envelope.message.header);
+        await this.saveSession(session);
+        
+        // 触发消息接收事件
+        this.emit('message', {
+            id: envelope.id,
+            sender: envelope.sender,
+            timestamp: envelope.timestamp,
+            content: decrypted
+        });
+    }
+    
+    // WebRTC点对点连接
+    async setupPeerConnection(remoteId) {
+        const config = {
+            iceServers: [
+                // 自主STUN/TURN服务器或使用豆生态中继
+                { urls: 'stun:relay.douchat.io' },
+                { urls: 'turn:relay.douchat.io', credential: 'demo', username: 'demo' }
+            ],
+            iceCandidatePoolSize: 10,
+            bundlePolicy: 'max-bundle',
+            rtcpMuxPolicy: 'require'
+        };
+        
+        const pc = new RTCPeerConnection(config);
+        
+        // 数据通道（用于消息传输）
+        const dc = pc.createDataChannel('douchat', {
+            ordered: true,          // 保持消息顺序
+            maxRetransmits: 5,      // 最大重传次数
+            protocol: 'dcp'         // 豆聊天协议
+        });
+        
+        dc.onopen = () => {
+            console.log('Data channel opened');
+            this.connections.set(remoteId, { pc, dc });
+        };
+        
+        dc.onmessage = (event) => {
+            this.handleDataChannelMessage(remoteId, event.data);
+        };
+        
+        // 生成SDP offer
+        const offer = await pc.createOffer({
+            offerToReceiveAudio: false,
+            offerToReceiveVideo: false
+        });
+        
+        await pc.setLocalDescription(offer);
+        
+        return offer;
+    }
+}
+```
+
+4. 豆生态原生应用集成
+
+```rust
+// 文件：native/src/integration/secure_storage.rs
+// 豆生态安全存储实现
+
+use doukernel::capabilities::{Capability, StorageAccess};
+use doukernel::crypto::SecureEnclave;
+
+pub struct SecureStorage {
+    capability: Capability,
+    enclave: SecureEnclave,
+}
+
+impl SecureStorage {
+    pub fn new() -> Result<Self, StorageError> {
+        // 请求安全存储能力
+        let capability = Capability::request("secure-storage")
+            .with_constraints(vec![
+                Constraint::Isolated,      // 隔离存储
+                Constraint::Encrypted,     // 自动加密
+                Constraint::TamperProof,   // 防篡改
+            ])
+            .acquire()?;
+        
+        // 初始化安全飞地（硬件支持）
+        let enclave = SecureEnclave::initialize()?;
+        
+        Ok(SecureStorage { capability, enclave })
+    }
+    
+    pub async fn store_key(&self, key_id: &str, key_data: &[u8]) -> Result<(), StorageError> {
+        // 1. 在安全飞地内加密密钥
+        let encrypted_key = self.enclave.encrypt_key(key_data)?;
+        
+        // 2. 通过能力保护的接口存储
+        self.capability.write(
+            &format!("keys/{}", key_id),
+            &encrypted_key,
+            WriteOptions {
+                atomic: true,
+                backup: true,  // 自动备份
+                sync: true,    // 同步写入
+            }
+        ).await?;
+        
+        Ok(())
+    }
+    
+    pub async fn load_key(&self, key_id: &str) -> Result<Vec<u8>, StorageError> {
+        // 1. 通过能力保护的接口读取
+        let encrypted_key = self.capability.read(
+            &format!("keys/{}", key_id),
+            ReadOptions::default()
+        ).await?;
+        
+        // 2. 在安全飞地内解密
+        let key_data = self.enclave.decrypt_key(&encrypted_key)?;
+        
+        Ok(key_data)
+    }
+    
+    pub async fn store_message(&self, session_id: &str, message: &EncryptedMessage) -> Result<(), StorageError> {
+        // 使用会话特定密钥加密消息
+        let session_key = self.derive_session_key(session_id)?;
+        
+        let encrypted_data = self.enclave.encrypt_with_key(
+            &session_key,
+            &message.serialize()?,
+            &format!("msg/{}", message.id)
+        )?;
+        
+        // 存储到加密数据库
+        self.capability.write(
+            &format!("messages/{}/{}", session_id, message.id),
+            &encrypted_data,
+            WriteOptions {
+                atomic: true,
+                backup: false,  // 消息不备份（安全考虑）
+                sync: false,    // 异步写入
+            }
+        ).await?;
+        
+        Ok(())
+    }
+}
+```
+
+5. 后量子加密混合方案
+
+```rust
+// 文件：core/src/crypto/pqc.rs
+// 后量子加密支持
+
+pub struct HybridEncryption {
+    classical: ECDH,      // 传统椭圆曲线加密
+    post_quantum: Kyber,  // 后量子算法（Kyber-1024）
+}
+
+impl HybridEncryption {
+    pub fn new() -> Self {
+        HybridEncryption {
+            classical: ECDH::new(P256),
+            post_quantum: Kyber::kyber1024(),
+        }
+    }
+    
+    pub fn encrypt(&self, recipient_public_key: &HybridPublicKey, plaintext: &[u8]) -> Result<HybridCiphertext, CryptoError> {
+        // 1. 生成临时密钥对（传统 + 后量子）
+        let ephemeral_classical = self.classical.generate_keypair();
+        let ephemeral_pq = self.post_quantum.generate_keypair();
+        
+        // 2. 计算两个共享密钥
+        let shared_classical = self.classical.dh(
+            &ephemeral_classical.private_key,
+            &recipient_public_key.classical
+        )?;
+        
+        let (shared_pq, encapsulation) = self.post_quantum.encapsulate(
+            &recipient_public_key.post_quantum
+        )?;
+        
+        // 3. 组合共享密钥
+        let combined_key = self.kdf_combine(&shared_classical, &shared_pq);
+        
+        // 4. 使用组合密钥加密
+        let ciphertext = self.encrypt_aes_gcm(&combined_key, plaintext)?;
+        
+        Ok(HybridCiphertext {
+            ephemeral_classical_public: ephemeral_classical.public_key,
+            ephemeral_pq_public: ephemeral_pq.public_key,
+            encapsulation,
+            ciphertext,
+        })
+    }
+    
+    pub fn decrypt(&self, private_key: &HybridPrivateKey, ciphertext: &HybridCiphertext) -> Result<Vec<u8>, CryptoError> {
+        // 1. 计算两个共享密钥
+        let shared_classical = self.classical.dh(
+            &private_key.classical,
+            &ciphertext.ephemeral_classical_public
+        )?;
+        
+        let shared_pq = self.post_quantum.decapsulate(
+            &private_key.post_quantum,
+            &ciphertext.encapsulation
+        )?;
+        
+        // 2. 组合共享密钥
+        let combined_key = self.kdf_combine(&shared_classical, &shared_pq);
+        
+        // 3. 解密消息
+        self.decrypt_aes_gcm(&combined_key, &ciphertext.ciphertext)
+    }
+}
+
+// 用于双棘轮的后量子增强
+pub struct PostQuantumDoubleRatchet {
+    base_ratchet: DoubleRatchet,
+    pq_ratchet: PQRatchet,
+}
+
+impl PostQuantumDoubleRatchet {
+    pub fn encrypt_message(&mut self, plaintext: &[u8]) -> Result<PostQuantumMessage, CryptoError> {
+        // 1. 使用传统双棘轮加密
+        let classical_message = self.base_ratchet.encrypt_message(plaintext)?;
+        
+        // 2. 使用后量子密钥加密传统消息密钥
+        let encrypted_key = self.pq_ratchet.encrypt_key(&classical_message.message_key)?;
+        
+        Ok(PostQuantumMessage {
+            classical_header: classical_message.header,
+            encrypted_message_key: encrypted_key,
+            ciphertext: classical_message.ciphertext,
+            pq_info: self.pq_ratchet.current_state(),
+        })
+    }
+}
+```
+
+📈 开发路线图
+
+阶段0：核心协议库 (6-12个月)
+
+· 双棘轮算法完全自主实现
+· X3DH密钥交换协议
+· 消息协议格式定义
+· 基础加密算法实现
+
+阶段1：Web应用开发 (6-12个月)
+
+· 纯前端Web界面
+· WebAssembly核心集成
+· WebRTC点对点连接
+· 浏览器端加密存储
+
+阶段2：原生应用开发 (8-12个月)
+
+· 豆生态原生UI框架集成
+· 安全存储和密钥管理
+· 硬件加密支持
+· 系统通知集成
+
+阶段3：高级功能 (12-18个月)
+
+· 群组端到端加密
+· 语音视频通话
+· 文件安全传输
+· 后量子加密支持
+
+阶段4：生态系统 (18-24个月)
+
+· 去中心化身份系统
+· 开放协议标准
+· 第三方客户端支持
+· 审计和安全认证
+
+🔨 构建指南
+
+核心库构建 (Rust)
+
+```bash
+# 1. 安装Rust工具链
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# 2. 获取源代码
+git clone https://github.com/DouEcoSys/DouChat.git
+cd DouChat/core
+
+# 3. 构建核心库
+cargo build --release --features "wasm"
+
+# 4. 构建WebAssembly
+cargo build --target wasm32-unknown-unknown --release
+wasm-bindgen target/wasm32-unknown-unknown/release/dou_chat_core.wasm --out-dir ../../web/src/core/pkg
+```
+
+Web应用构建
+
+```bash
+cd ../web
+npm install
+npm run build
+# 生成纯静态文件，可部署到任何Web服务器
+```
+
+原生应用构建 (豆生态)
+
+```bash
+cd ../native
+cargo build --release --target your-target
+# 需要豆生态SDK和工具链
+```
+
+👥 安全审计要求
+
+必须通过的安全认证
+
+1. 密码学审计：由独立密码学专家审计
+2. 协议安全：形式化验证协议安全性
+3. 实现审计：代码级安全审计
+4. 渗透测试：黑盒和白盒测试
+
+漏洞披露计划
+
+· 严格遵循负责任披露原则
+· 设立安全漏洞奖金
+· 90天内修复严重漏洞
+· 完全透明的安全公告
+
+📄 许可证
+
+本项目采用 GNU Affero General Public License v3.0 (AGPLv3)，确保所有修改和衍生作品保持开源，包括网络服务版本。
+
+---
+
+豆加密聊天 - 从协议到实现的完全自主、端到端加密的通信解决方案
