@@ -1,0 +1,756 @@
+DouBrowser | 豆浏览器
+
+一个完全独立、自主开发的浏览器引擎和浏览器，不基于Android系统，不使用Chromium内核，不与任何外部服务绑定。基于豆生态的微内核架构和隐私优先理念。
+
+🎯 项目目标
+
+· 完全独立自主：从零开始开发浏览器引擎，不依赖Chromium、WebKit、Gecko等现有引擎
+· 彻底去谷歌化：不使用任何Google技术栈、不集成Google服务、不依赖Android框架
+· 隐私至上：设计上防止数据泄露，所有处理本地化
+· 安全架构：基于豆生态能力模型的进程级隔离
+· 轻量化：专注于核心浏览功能，避免代码膨胀
+
+🏗️ 系统架构
+
+```
+┌─────────────────────────────────────────────────────┐
+│                 豆浏览器用户界面                       │
+│   ┌─────────────┬─────────────┬─────────────┐     │
+│   │   标签管理  │   书签管理  │   设置界面  │     │
+├───┴─────────────┴─────────────┴─────────────┴─────┤
+│                豆浏览器引擎层                        │
+│   ┌─────────────────────────────────────────────┐ │
+│   │   自主渲染引擎                              │ │
+│   │   • HTML/CSS解析器                          │ │
+│   │   • JavaScript虚拟机                        │ │
+│   │   • 2D渲染管道                              │ │
+├───┼─────────────────────────────────────────────┤ │
+│   │   自主网络栈                               │ │
+│   │   • HTTP/HTTPS客户端                        │ │
+│   │   • DNS解析器                               │ │
+│   │   • TLS实现                                 │ │
+├───┼─────────────────────────────────────────────┤ │
+│   │   自主JavaScript引擎                       │ │
+│   │   • ECMAScript兼容                          │ │
+│   │   • 内存安全管理                            │ │
+│   │   • JIT编译器                               │ │
+└───┼─────────────────────────────────────────────┤ │
+    │   豆生态集成层                               │ │
+    │   • 能力模型授权                            │ │
+    │   • 安全沙箱                                │ │
+    │   • 离线AI接口                              │ │
+    └─────────────────────────────────────────────┘ │
+                    DouKernel 微内核                │
+                    (能力控制、进程隔离)              │
+└─────────────────────────────────────────────────────┘
+```
+
+🔧 技术栈选择
+
+完全自主开发组件
+
+组件 技术选择 设计原则
+HTML解析器 自研基于状态机的解析器 渐进式解析、容错处理
+CSS引擎 自研选择器匹配和计算 支持CSS3核心特性
+JavaScript引擎 自研字节码解释器 + JIT 内存安全、无JIT逃逸
+2D渲染 基于Vulkan的向量图形 GPU加速、无遗留API
+网络栈 自研HTTP/2、TLS 1.3 最小攻击面、形式化验证
+多媒体 简化编解码器支持 仅支持开放格式
+
+开发语言
+
+· 核心引擎：Rust（内存安全、性能）
+· 系统接口：C（微内核兼容）
+· 用户界面：豆生态UI框架
+· 工具链：自研构建系统
+
+📁 项目结构
+
+```
+DouBrowser/
+├── README.md                    # 项目说明
+├── LICENSE                      # 开源协议(GPLv3)
+├── doubuild.toml               # 豆生态构建配置
+├── docs/                       # 文档
+│   ├── ARCHITECTURE.md         # 架构设计文档
+│   ├── SECURITY_DESIGN.md      # 安全设计文档
+│   ├── PROTOCOL_SUPPORT.md     # 协议支持文档
+│   └── API_REFERENCE.md        # API参考
+├── src/
+│   ├── browser/               # 浏览器主进程
+│   │   ├── main.rs           # 入口点
+│   │   ├── window.rs         # 窗口管理
+│   │   ├── tab.rs            # 标签管理
+│   │   └── session.rs        # 会话管理
+│   ├── render/               # 渲染引擎
+│   │   ├── html/
+│   │   │   ├── parser.rs     # HTML解析器
+│   │   │   ├── dom.rs        # DOM树实现
+│   │   │   └── tokenizer.rs  # 词法分析器
+│   │   ├── css/
+│   │   │   ├── parser.rs     # CSS解析器
+│   │   │   ├── selector.rs   # 选择器引擎
+│   │   │   └── cascade.rs    # 样式计算
+│   │   ├── layout/           # 布局引擎
+│   │   ├── paint/            # 绘制引擎
+│   │   └── composite/        # 合成器
+│   ├── js/                   # JavaScript引擎
+│   │   ├── vm.rs            # 虚拟机
+│   │   ├── parser.rs        # 语法分析器
+│   │   ├── bytecode.rs      # 字节码生成
+│   │   ├── jit/             # JIT编译器
+│   │   └── builtins/        # 内置对象
+│   ├── net/                  # 网络栈
+│   │   ├── http/            # HTTP实现
+│   │   ├── tls/             # TLS实现
+│   │   ├── dns.rs           # DNS解析器
+│   │   └── cache.rs         # 本地缓存
+│   ├── storage/             # 本地存储
+│   │   ├── local_storage.rs
+│   │   ├── indexed_db.rs
+│   │   └── cookies.rs
+│   └── integration/         # 豆生态集成
+│       ├── capability.rs    # 能力模型
+│       ├── sandbox.rs       # 沙箱隔离
+│       └── doujuice.rs      # 豆汁助手集成
+├── resources/               # 资源文件
+│   ├── default.css         # 默认样式
+│   ├── user_agent.css      # 用户代理样式
+│   └── icons/              # 图标资源
+├── tests/                  # 测试套件
+│   ├── html/               # HTML解析测试
+│   ├── css/                # CSS解析测试
+│   ├── js/                 # JS引擎测试
+│   └── integration/        # 集成测试
+└── tools/                  # 开发工具
+    ├── test_server/        # 测试HTTP服务器
+    └── debugger/           # 调试工具
+```
+
+🚀 核心代码示例
+
+1. 自主HTML解析器
+
+```rust
+// 文件：src/render/html/parser.rs
+// 完全自主开发的HTML5解析器
+
+pub struct HTMLParser {
+    tokenizer: HTMLTokenizer,
+    tree_builder: DOMTreeBuilder,
+    parsing_mode: ParsingMode,
+}
+
+impl HTMLParser {
+    pub fn new() -> Self {
+        HTMLParser {
+            tokenizer: HTMLTokenizer::new(),
+            tree_builder: DOMTreeBuilder::new(),
+            parsing_mode: ParsingMode::NoQuirks,
+        }
+    }
+    
+    pub fn parse(&mut self, input: &str, url: &Url) -> Result<Rc<Document>, ParseError> {
+        // 创建文档对象
+        let document = Document::new(url.clone());
+        
+        // 初始化树构建器
+        self.tree_builder.set_document(document.clone());
+        
+        // 分词和解析
+        let mut chars = input.chars().peekable();
+        while let Some(token) = self.tokenizer.next_token(&mut chars) {
+            match token {
+                Token::StartTag { name, attributes, self_closing } => {
+                    self.tree_builder.insert_element(name, attributes, self_closing);
+                }
+                Token::EndTag(name) => {
+                    self.tree_builder.close_element(name);
+                }
+                Token::Character(data) => {
+                    self.tree_builder.insert_text(data);
+                }
+                Token::Comment(data) => {
+                    self.tree_builder.insert_comment(data);
+                }
+                Token::Doctype { name, public_id, system_id } => {
+                    self.tree_builder.insert_doctype(name, public_id, system_id);
+                }
+                Token::EOF => break,
+            }
+        }
+        
+        // 完成文档构建
+        self.tree_builder.finish();
+        Ok(document)
+    }
+}
+
+// HTML分词器（词法分析）
+struct HTMLTokenizer {
+    state: TokenizerState,
+    last_start_tag: Option<String>,
+}
+
+impl HTMLTokenizer {
+    fn next_token<I>(&mut self, input: &mut Peekable<I>) -> Option<Token>
+    where
+        I: Iterator<Item = char>,
+    {
+        match self.state {
+            TokenizerState::Data => self.data_state(input),
+            TokenizerState::TagOpen => self.tag_open_state(input),
+            TokenizerState::EndTagOpen => self.end_tag_open_state(input),
+            TokenizerState::TagName => self.tag_name_state(input),
+            // ... 其他状态处理
+            _ => None,
+        }
+    }
+    
+    fn data_state<I>(&mut self, input: &mut Peekable<I>) -> Option<Token>
+    where
+        I: Iterator<Item = char>,
+    {
+        match input.peek() {
+            Some('<') => {
+                input.next(); // 消耗 '<'
+                self.state = TokenizerState::TagOpen;
+                None
+            }
+            Some('&') => {
+                // 处理字符实体
+                self.character_reference_state(input)
+            }
+            Some(_) => {
+                // 收集文本字符
+                let mut text = String::new();
+                while let Some(&ch) = input.peek() {
+                    if ch == '<' || ch == '&' {
+                        break;
+                    }
+                    text.push(ch);
+                    input.next();
+                }
+                Some(Token::Character(text))
+            }
+            None => Some(Token::EOF),
+        }
+    }
+}
+```
+
+2. 自主CSS引擎
+
+```rust
+// 文件：src/render/css/selector.rs
+// CSS选择器匹配引擎
+
+pub struct SelectorMatcher {
+    selectors: Vec<Selector>,
+}
+
+impl SelectorMatcher {
+    pub fn new(css_text: &str) -> Result<Self, ParseError> {
+        let parser = CSSParser::new(css_text);
+        let selectors = parser.parse_selectors()?;
+        Ok(SelectorMatcher { selectors })
+    }
+    
+    pub fn match_element(&self, element: &Element) -> Vec<MatchedRule> {
+        let mut matched_rules = Vec::new();
+        
+        for selector in &self.selectors {
+            if self.selector_matches(selector, element) {
+                matched_rules.push(MatchedRule {
+                    selector: selector.clone(),
+                    specificity: selector.specificity(),
+                });
+            }
+        }
+        
+        // 按特异性排序
+        matched_rules.sort_by_key(|rule| rule.specificity);
+        matched_rules
+    }
+    
+    fn selector_matches(&self, selector: &Selector, element: &Element) -> bool {
+        // 检查每个简单选择器
+        for simple_selector in &selector.simple_selectors {
+            match simple_selector {
+                SimpleSelector::Universal => continue, // * 匹配所有
+                SimpleSelector::Type(tag_name) => {
+                    if element.tag_name() != *tag_name {
+                        return false;
+                    }
+                }
+                SimpleSelector::Class(class) => {
+                    if !element.has_class(class) {
+                        return false;
+                    }
+                }
+                SimpleSelector::Id(id) => {
+                    if element.id() != Some(id) {
+                        return false;
+                    }
+                }
+                SimpleSelector::Attribute { name, operator, value } => {
+                    if !self.attribute_matches(element, name, operator, value) {
+                        return false;
+                    }
+                }
+                SimpleSelector::PseudoClass(pseudo) => {
+                    if !self.pseudo_class_matches(element, pseudo) {
+                        return false;
+                    }
+                }
+            }
+        }
+        
+        true
+    }
+}
+
+// CSS样式计算
+pub struct StyleComputer {
+    user_agent_styles: StyleSheet,
+    author_styles: Vec<StyleSheet>,
+    cascade: Cascade,
+}
+
+impl StyleComputer {
+    pub fn compute_style(&self, element: &Element) -> ComputedStyle {
+        let mut declarations = Vec::new();
+        
+        // 1. 收集用户代理样式
+        declarations.extend(self.user_agent_styles.matching_rules(element));
+        
+        // 2. 收集作者样式
+        for sheet in &self.author_styles {
+            declarations.extend(sheet.matching_rules(element));
+        }
+        
+        // 3. 收集内联样式
+        if let Some(inline_style) = element.inline_style() {
+            declarations.push((inline_style.clone(), Specificity::new(1, 0, 0, 0)));
+        }
+        
+        // 4. 层叠计算
+        self.cascade.compute(declarations)
+    }
+}
+```
+
+3. 自主JavaScript引擎
+
+```rust
+// 文件：src/js/vm.rs
+// 自主JavaScript虚拟机
+
+pub struct JavaScriptVM {
+    heap: Heap,
+    call_stack: CallStack,
+    global_object: Object,
+    bytecode_interpreter: BytecodeInterpreter,
+}
+
+impl JavaScriptVM {
+    pub fn new() -> Self {
+        let mut vm = JavaScriptVM {
+            heap: Heap::new(),
+            call_stack: CallStack::with_capacity(1024),
+            global_object: Object::new(),
+            bytecode_interpreter: BytecodeInterpreter::new(),
+        };
+        
+        // 初始化内置对象
+        vm.init_global_object();
+        vm
+    }
+    
+    fn init_global_object(&mut self) {
+        // 定义全局对象属性
+        self.global_object.define_property(
+            "undefined",
+            Property::new(Value::Undefined, false, false, false)
+        );
+        
+        self.global_object.define_property(
+            "Infinity",
+            Property::new(Value::Number(f64::INFINITY), false, false, false)
+        );
+        
+        // 定义全局函数
+        self.global_object.define_function("parseInt", Self::global_parse_int);
+        self.global_object.define_function("parseFloat", Self::global_parse_float);
+        self.global_object.define_function("isNaN", Self::global_is_nan);
+        
+        // 定义内置对象构造函数
+        self.global_object.define_property(
+            "Object",
+            Property::new(Value::Object(ObjectConstructor::new()), true, false, true)
+        );
+        
+        self.global_object.define_property(
+            "Array",
+            Property::new(Value::Object(ArrayConstructor::new()), true, false, true)
+        );
+        
+        // 更多内置对象...
+    }
+    
+    pub fn execute(&mut self, bytecode: &Bytecode) -> Result<Value, RuntimeError> {
+        // 设置执行环境
+        let env = ExecutionEnvironment::new(&self.global_object);
+        self.call_stack.push_frame(Frame::new(bytecode, env));
+        
+        // 解释执行字节码
+        while let Some(frame) = self.call_stack.current_frame() {
+            let result = self.bytecode_interpreter.execute_frame(
+                frame,
+                &mut self.heap,
+                &mut self.call_stack
+            );
+            
+            match result {
+                InterpretResult::Return(value) => {
+                    self.call_stack.pop_frame();
+                    if self.call_stack.is_empty() {
+                        return Ok(value);
+                    } else {
+                        // 将返回值传递给调用者
+                        self.call_stack.current_frame_mut().unwrap().push_value(value);
+                    }
+                }
+                InterpretResult::Yield => {
+                    // 暂停执行（用于异步操作）
+                    break;
+                }
+                InterpretResult::Error(err) => {
+                    return Err(err);
+                }
+                InterpretResult::Continue => {
+                    // 继续执行下一指令
+                }
+            }
+        }
+        
+        Ok(Value::Undefined)
+    }
+}
+
+// 字节码指令集
+#[derive(Debug, Clone, Copy)]
+pub enum Bytecode {
+    LoadConst(usize),     // 加载常量
+    LoadLocal(usize),     // 加载局部变量
+    StoreLocal(usize),    // 存储到局部变量
+    LoadGlobal(String),   // 加载全局变量
+    StoreGlobal(String),  // 存储到全局变量
+    Add,                  // 加法
+    Sub,                  // 减法
+    Mul,                  // 乘法
+    Div,                  // 除法
+    Call(usize),          // 函数调用（参数个数）
+    Return,               // 返回值
+    Jump(usize),          // 无条件跳转
+    JumpIfFalse(usize),   // 条件跳转（假）
+    // ... 更多指令
+}
+```
+
+4. 豆生态能力模型集成
+
+```rust
+// 文件：src/integration/capability.rs
+// 浏览器与豆生态能力模型的安全集成
+
+pub struct CapabilityManager {
+    kernel_endpoint: KernelEndpoint,
+    browser_caps: BrowserCapabilities,
+    sandbox_manager: SandboxManager,
+}
+
+impl CapabilityManager {
+    pub fn new() -> Result<Self, CapabilityError> {
+        // 连接到豆微内核
+        let endpoint = KernelEndpoint::connect()?;
+        
+        // 请求浏览器基础能力
+        let base_caps = endpoint.request_capabilities(&[
+            CapabilityRequest::new("network-access", CapabilityScope::Global),
+            CapabilityRequest::new("local-storage", CapabilityScope::Process),
+            CapabilityRequest::new("ui-display", CapabilityScope::Process),
+        ])?;
+        
+        Ok(CapabilityManager {
+            kernel_endpoint: endpoint,
+            browser_caps: BrowserCapabilities::new(base_caps),
+            sandbox_manager: SandboxManager::new(),
+        })
+    }
+    
+    // 为标签页创建安全沙箱
+    pub fn create_tab_sandbox(&self, url: &Url) -> Result<TabSandbox, SandboxError> {
+        // 分析URL确定所需能力
+        let required_caps = self.analyze_url_capabilities(url);
+        
+        // 向内核请求创建新的保护域
+        let protection_domain = self.kernel_endpoint.create_protection_domain(
+            &format!("tab-{}", url.host_str().unwrap_or("unknown"))
+        )?;
+        
+        // 授予最小必要能力
+        for cap_request in &required_caps {
+            let capability = self.kernel_endpoint.derive_capability(
+                &self.browser_caps,
+                cap_request,
+                &protection_domain
+            )?;
+            
+            protection_domain.grant_capability(capability)?;
+        }
+        
+        // 创建沙箱环境
+        let sandbox = self.sandbox_manager.create_sandbox(
+            protection_domain,
+            required_caps
+        )?;
+        
+        Ok(sandbox)
+    }
+    
+    fn analyze_url_capabilities(&self, url: &Url) -> Vec<CapabilityRequest> {
+        let mut caps = vec![
+            CapabilityRequest::new("dom-access", CapabilityScope::Domain(url.domain())),
+            CapabilityRequest::new("script-execution", CapabilityScope::Domain(url.domain())),
+        ];
+        
+        // 根据URL协议添加额外能力
+        match url.scheme() {
+            "http" | "https" => {
+                caps.push(CapabilityRequest::new("network-fetch", CapabilityScope::Domain(url.domain())));
+                caps.push(CapabilityRequest::new("cookie-access", CapabilityScope::Domain(url.domain())));
+            }
+            "file" => {
+                caps.push(CapabilityRequest::new("file-access", CapabilityScope::Local));
+            }
+            _ => {
+                // 其他协议默认无网络访问
+            }
+        }
+        
+        caps
+    }
+}
+```
+
+5. 隐私优先的网络栈
+
+```rust
+// 文件：src/net/http/client.rs
+// 自主开发的HTTP客户端
+
+pub struct HttpClient {
+    connection_pool: ConnectionPool,
+    dns_resolver: DnsResolver,
+    cookie_jar: IsolatedCookieJar,
+    ad_blocker: AdBlocker,
+    tracker_blocker: TrackerBlocker,
+}
+
+impl HttpClient {
+    pub async fn fetch(&self, request: HttpRequest) -> Result<HttpResponse, HttpError> {
+        // 1. 应用隐私规则
+        let filtered_request = self.apply_privacy_rules(request);
+        
+        // 2. DNS解析（隐私模式）
+        let resolved = self.dns_resolver.resolve_privacy(
+            &filtered_request.url.host_str().unwrap(),
+            DnsOptions {
+                use_doh: true,
+                prevent_leakage: true,
+            }
+        ).await?;
+        
+        // 3. 建立TLS连接
+        let mut connection = self.connection_pool.get_connection(
+            &resolved,
+            filtered_request.url.port_or_known_default().unwrap_or(443)
+        ).await?;
+        
+        // 4. 发送请求
+        connection.send_request(filtered_request).await?;
+        
+        // 5. 读取响应
+        let mut response = connection.read_response().await?;
+        
+        // 6. 应用内容过滤器
+        response = self.filter_response(response).await?;
+        
+        // 7. 隔离存储Cookie
+        if let Some(cookies) = response.headers.get("set-cookie") {
+            self.cookie_jar.store_isolated(
+                &filtered_request.url,
+                cookies,
+                CookieIsolation::PerDomain
+            );
+        }
+        
+        Ok(response)
+    }
+    
+    fn apply_privacy_rules(&self, mut request: HttpRequest) -> HttpRequest {
+        // 移除追踪头
+        request.headers.remove("user-agent");
+        request.headers.remove("referer");
+        request.headers.remove("cookie");
+        
+        // 添加隐私友好的替代头
+        request.headers.insert(
+            "user-agent",
+            "DouBrowser/1.0 (Privacy-focused)"
+        );
+        
+        // 启用隐私保护
+        request.headers.insert(
+            "dnt",
+            "1" // Do Not Track
+        );
+        
+        request
+    }
+    
+    async fn filter_response(&self, mut response: HttpResponse) -> Result<HttpResponse, HttpError> {
+        // 广告拦截
+        if self.ad_blocker.should_block(&response.url, &response.headers) {
+            return Err(HttpError::Blocked("广告被拦截".to_string()));
+        }
+        
+        // 追踪器拦截
+        if self.tracker_blocker.is_tracker(&response.url) {
+            return Err(HttpError::Blocked("追踪器被拦截".to_string()));
+        }
+        
+        // 内容过滤
+        if let Some(content_type) = response.headers.get("content-type") {
+            if content_type.contains("text/html") || content_type.contains("text/css") {
+                response.body = self.filter_content(response.body).await;
+            }
+        }
+        
+        Ok(response)
+    }
+}
+```
+
+📈 开发路线图
+
+阶段0：核心引擎基础 (6-12个月)
+
+· HTML5解析器基础实现
+· CSS3核心选择器和计算
+· JavaScript解释器基础
+· 基础2D渲染管道
+· HTTP/1.1客户端实现
+
+阶段1：基础浏览器功能 (12-18个月)
+
+· DOM树实现和操作API
+· 基本页面布局和渲染
+· JavaScript引擎基础功能
+· 标签页管理和导航
+· 书签和基础历史记录
+
+阶段2：完整功能实现 (18-30个月)
+
+· CSS Grid/Flexbox支持
+· JavaScript JIT编译器
+· HTTP/2和TLS 1.3支持
+· Canvas 2D API
+· 开发者工具基础框架
+
+阶段3：优化和安全增强 (30-48个月)
+
+· WebAssembly支持
+· 多进程架构
+· 高级安全沙箱
+· 性能分析和优化
+· 标准兼容性测试
+
+🔨 构建指南
+
+环境要求
+
+· 操作系统：豆生态开发环境或Linux
+· 内存：8GB+（建议16GB）
+· 存储：50GB+ 可用空间
+· Rust工具链：1.70+版本
+· 豆生态SDK：最新版本
+
+构建步骤
+
+```bash
+# 1. 获取源代码
+git clone https://github.com/DouEcoSys/DouBrowser.git
+cd DouBrowser
+
+# 2. 安装豆生态开发环境
+curl -fsSL https://douos.dev/setup.sh | bash
+
+# 3. 配置构建
+doubuild configure --profile=release
+
+# 4. 编译核心引擎
+doubuild build engine
+
+# 5. 编译浏览器界面
+doubuild build browser
+
+# 6. 运行测试
+doubuild test --all
+
+# 7. 启动浏览器
+./target/release/doubrowser --test-mode
+```
+
+👥 贡献指南
+
+需要的技能
+
+· Rust语言高级特性
+· 浏览器引擎开发经验
+· 编译器和解释器设计
+· 网络协议和安全
+· 图形渲染和GPU编程
+
+代码标准
+
+1. 安全性优先：所有代码必须通过安全检查
+2. 零外部依赖：禁止引入第三方C/C++库
+3. 内存安全：使用Rust的安全特性
+4. 最小权限：遵循豆生态能力模型
+5. 文档完备：所有公共API必须有文档
+
+贡献流程
+
+1. 阅读架构文档和设计原则
+2. 选择"良好开端"标签的任务开始
+3. 确保代码通过所有安全和隐私检查
+4. 提交Pull Request，通过CI测试
+5. 接受核心维护者的代码审查
+
+📄 许可证
+
+本项目采用 GNU General Public License v3.0，确保所有衍生作品保持开源和自由。
+
+🛡️ 安全与隐私承诺
+
+1. 完全自主：不包含任何第三方专有代码
+2. 零遥测：不收集任何使用数据或诊断信息
+3. 本地处理：所有数据在设备端处理
+4. 透明可信：从芯片到应用完全可审计
+5. 安全架构：基于形式化验证的微内核
+
+---
+
+豆浏览器 - 从内核到界面的完全自主、隐私优先的网页浏览体验
